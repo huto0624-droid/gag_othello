@@ -1,0 +1,31 @@
+name: gag_othello
+description: "ギャグオセロ - 格差解消・ストレスフリーなパーティー向けオセロ（顔写真がコマ、台パンで救済）"
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: '>=3.3.0 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  audioplayers: ^6.1.0
+  image_picker: ^1.1.2
+  shared_preferences: ^2.3.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^4.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/audio/
+  fonts:
+    - family: GagGothic
+      fonts:
+        - asset: assets/fonts/GagGothic-Bold.otf
+          weight: 700
+        - asset: assets/fonts/GagGothic-Black.otf
+          weight: 900
