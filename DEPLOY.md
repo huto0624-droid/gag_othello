@@ -1,155 +1,85 @@
-# ウェブに公開する（Firebase Hosting）
+# ウェブに公開する（GitHub Pages）
 
-遊べることを確認したあと、URL を知っている人なら誰でも遊べる状態にする手順です。
-Firebase Hosting は **HTTPS** で配信されるので、スマホのカメラ・写真選択も使えます。無料（Spark プラン・クレジットカード不要）で始められます。
+`https://ユーザー名.github.io/リポジトリ名/` で、URL を知っている人なら誰でも遊べる状態にする手順です。
+GitHub Pages は **HTTPS** で配信されるので、スマホのカメラ・写真選択も使えます。無料です。
 
-> **先に読んでください**：この手順書と `firebase.json` は、Flutter / Firebase に触れない環境で書きました。ビルドも公開も、ここでは一度も実行していません。止まったら、出たメッセージをそのまま教えてください。
+> この手順書と `.github/workflows/deploy-pages.yml` は、Flutter / GitHub に触れない環境で書きました。ビルドも公開も、ここでは一度も実行していません。止まったら、出たメッセージをそのまま教えてください。
 
-## 全体の流れ
+Firebase Hosting で公開したいときは [DEPLOY-firebase.md](DEPLOY-firebase.md) を見てください（今は使いません）。
 
-1. 公開用の設定を入れる（最初の 1 回）
-2. `flutter build web --release` でビルドする
-3. `firebase deploy` でアップロードする
+## 先に知っておくこと
 
-## 1. 公開用の設定を入れる（最初の 1 回）
+- ブラウザで動くのは、`flutter build web` でできた `build/web` の中身だけです。Flutter のソースコードをそのまま置いても動きません。
+- そこで、`main` ブランチに push するたびに **GitHub のサーバーが自動でビルドして公開する** 設定（`.github/workflows/deploy-pages.yml`）を同梱しています。自分の PC でビルドして上げる必要はありません。
+- リポジトリは **公開（Public）** にしてください（無料プランの GitHub Pages は公開リポジトリのみ）。
 
-プロジェクトのフォルダで、次を実行します。ブラウザのタブの名前・説明・「読み込み中」の画面・ホーム画面に追加したときの名前が `ギャグオセロ` になります（アイコンは `web/` に同梱済み）。
+## 公開する（最初の 1 回）
 
-```bash
-python3 tool/post_create.py
-```
+### 1. ファイルを GitHub に上げる
 
-何度実行しても同じ結果になります（Windows では `python3` が `python` や `py` のことがあります）。
-
-アイコンが Flutter 標準（青い F）のままのときは、zip に入っている `web/favicon.png` と `web/icons/` を、プロジェクトの `web/` に上書きコピーしてください。`web/index.html` と `web/manifest.json` がないと「skip」と出るので、そのときは先に `flutter create . --project-name gag_othello --platforms=android,ios,web` を実行してください。
-
-## 2. ビルドする
+zip を展開した中身を、プロジェクトのフォルダ（`C:\programing\gag_othello`）に上書きコピーしたあと、そのフォルダのターミナルで次を実行します。
 
 ```bash
-flutter pub get
-flutter build web --release
+git add .
+git commit -m "update"
+git push
 ```
 
-できあがりは `build/web/` に入ります。公開するのはこのフォルダの中身です。
+確認すること：
 
-公開用ビルドでは、画面下の赤い「エラー表示」は出ません（遊んでいる人にエラー文を見せないため）。友だちに試してもらって、おかしいときに原因を読みたいなら、次の形でビルドします。
+- `.github/workflows/deploy-pages.yml` が入っていること（先頭が `.` のフォルダなので、見えないときは隠しファイルの表示をオン）。GitHub の画面でリポジトリを開き、`.github` フォルダがあれば OK です。
+- `web/index.html` が入っていること（なければ、先に `flutter create . --project-name gag_othello --platforms=android,ios,web` を一度実行してから push）。
+- ブランチ名が `main` であること（違う場合は、`deploy-pages.yml` の `branches: [main]` を合わせる）。
+- GitHub の画面の「Add file → Upload files」は、フォルダごとの上げ方に失敗しやすいので使わず、`git push` で上げてください。
 
-```bash
-flutter build web --release --dart-define=SHOW_ERRORS=true
-```
+### 2. Pages の設定を「GitHub Actions」にする
 
-### 手元で最終確認（任意・おすすめ）
+GitHub のリポジトリ →「Settings」→ 左の「Pages」→「Build and deployment」の **Source** を **「GitHub Actions」** にします。
+（「Deploy from a branch」のままだと、アプリではなく README が表示されます。）
 
-```bash
-python3 -m http.server 8000 -d build/web
-```
+### 3. 公開されるのを待つ
 
-ブラウザで `http://localhost:8000` を開き、タイトル → 対局 → 終局まで通して遊べるか確かめます。確認が終わったらターミナルで `Ctrl + C`。
+「Actions」タブで `Deploy to GitHub Pages` が緑のチェックになるのを待ちます（数分）。赤い × のときは、開いて出ているエラーを教えてください。
+公開先は `https://ユーザー名.github.io/リポジトリ名/` で、Actions の実行結果にも URL が出ます。
 
-## 3. Firebase に公開する
+## 更新するとき
 
-### 3-1. 最初の 1 回だけ
+変更したファイルを `git add .` → `git commit -m "..."` → `git push` するだけです。数分後に公開版が入れ替わります。
 
-1. **Node.js** を入れる（<https://nodejs.org/>、LTS 版）。
-2. Firebase CLI を入れる。
-   ```bash
-   npm install -g firebase-tools
-   ```
-3. ログインする（ブラウザが開くので Google アカウントを選ぶ）。
-   ```bash
-   firebase login
-   ```
-4. <https://console.firebase.google.com/> で「プロジェクトを追加」。名前を入れて進める（Google アナリティクスは「無効」でかまいません）。作成後、プロジェクトの設定に出る **プロジェクト ID**（例：`gag-othello-1a2b3`）を控える。
-5. 同じコンソールの左メニュー「構築」→「Hosting」→「始める」を押して、案内の最後まで進める（サイトの枠が作られます。画面にある CLI のコマンドは、この手順書では使わないので実行不要）。
+更新したのに古いままのときは、ページを `Ctrl + Shift + R`（スマホは閉じて開き直す）で読み込み直します。タイトル画面の一番下に出る **`ver ...`** の印が、いま動いている版です。push した版と違えば、まだ古いほうが出ています。
 
-### 3-2. アップロード
+## 手元で動かして確かめる
 
-プロジェクトのフォルダ（`firebase.json` があるところ）で：
-
-```bash
-firebase deploy --only hosting --project プロジェクトID
-```
-
-終わりに表示される `Hosting URL:` が公開先です（`https://プロジェクトID.web.app`）。スマホでも開いて、写真の選択・撮影と音が出ることを確認してください。
-
-`firebase.json` はすでに入っています（公開フォルダ `build/web`、`index.html` などを毎回取り直す設定つき）。
-
-### 3-3. 更新するとき
-
-直したあと、**ビルド → deploy** をもう一度やるだけです。
-
-```bash
-flutter build web --release
-firebase deploy --only hosting --project プロジェクトID
-```
-
-すでに開いている人は、ページを 2 回読み込み直すと新しい版になります（Flutter の仕組みで、1 回目に新しい版を取り込み、2 回目から使われます）。
-
-### 本番の前に試したいとき（任意）
-
-本番とは別の、期限つきの URL に置けます。
-
-```bash
-firebase hosting:channel:deploy preview --project プロジェクトID
-```
-
-## 公開してから気をつけること
-
-- **無料枠の転送量**：Hosting の無料枠は、保存 10 GB・転送 **1 日 360 MB**（公式の料金ページの表示、2026 年 10 月時点）。このアプリは初めて来た人 1 人あたり、おおよそ **7〜8 MB** 前後（音 3.3 MB + フォント 約 3 MB + アプリ本体の見込み。実際の大きさはビルド後の `build/web` で確認できます）なので、**初めての人が 1 日 40 人前後**でいっぱいになる計算です（目安）。2 回目以降はブラウザに残るので数えません。友だち・家族・イベント程度なら足ります。たくさんの人に配るなら、音を圧縮形式（mp3 など）にして軽くするか、料金プランを見直してください（音の圧縮は頼んでもらえれば対応します）。
-- **カメラは HTTPS が必須**：`https://` で開いていれば問題ありません。パソコンのブラウザでは、「カメラ」を選んでもファイル選択になることがあります（ブラウザ側の仕様です）。
-- **顔写真と設定はそのブラウザの中だけに保存**されます。サーバーには送っていません。そのため、次のときは保存が消えます：シークレットウィンドウで遊んだとき、サイトデータを消したとき、別の端末・別のブラウザで開いたとき。`プロジェクトID.web.app` と `プロジェクトID.firebaseapp.com` は別のサイト扱いで、保存も別になります（URL は片方に決めて配ってください）。
-- **最初の読み込み**は数秒かかります（「よみこみ中…」の画面が出ます）。CanvasKit（描画エンジン）は Google のサーバー（gstatic）から読むので、そこにつながらない学校・会社のネットワークでは開けないことがあります。
-- **フォントのライセンス**：同梱の日本語フォントは SIL Open Font License 1.1 です。ライセンス全文は `web/NOTICE-fonts.txt`（公開後は `https://…/NOTICE-fonts.txt`）にあります。
-- **独自ドメイン**を使うなら、Firebase コンソール →「Hosting」→「ドメインを追加」。表示された DNS の設定をドメイン会社の画面に入れます。
-
-## ほかの公開先
-
-どれも「`flutter build web --release` でできた `build/web` の中身を置く」だけです。
-
-| 公開先 | やりかた |
+| やりたいこと | 方法 |
 | --- | --- |
-| **Netlify Drop** | <https://app.netlify.com/drop> に `build/web` フォルダをドラッグ。いちばん手軽。登録して「自分のサイト」にすると残せます |
-| **Cloudflare Pages** | ダッシュボードの Workers & Pages → Pages →「Upload assets」で `build/web` を上げる。転送量の制限がゆるいと言われています（最新の条件は公式で確認してください） |
-| **GitHub Pages** | 下の「GitHub Pages で公開する」を見てください（自動ビルドの設定つき） |
+| 開発しながら確かめる | ターミナルで `flutter run -d chrome`（保存して `r` で更新） |
+| 公開と同じビルドを確かめる | `flutter build web --release` のあと、`python -m http.server 8000 -d build/web` を実行して `http://localhost:8000` を開く（Ctrl + C で止める） |
 
-## GitHub Pages で公開する
+### VS Code の「Go Live」（Live Server）は使えません
 
-`https://ユーザー名.github.io/リポジトリ名/` で公開されます。リポジトリは**公開（Public）**にしてください（無料プランの GitHub Pages は公開リポジトリのみ）。
+Go Live は、フォルダの中身をそのまま見せる道具です。Flutter のプロジェクトは、そのままでは Web ページになっていないので、次のようになります。
 
-### 「README だけ表示される」ときは
+- プロジェクトのフォルダで Go Live → ファイル名の一覧だけが出る（`index.html` がないため）
+- `web/index.html` を Go Live → 「よみこみ中」のまま（これはビルド前の部品です）
 
-GitHub Pages の設定が「ブランチの中身をそのまま公開する」になっていると、アプリではなくリポジトリの `README.md` がページとして表示されます。Flutter のソースコードをそのまま置いても動きません（ブラウザで動くのは、`flutter build web` でできた `build/web` の中身だけです。`build/` は `.gitignore` で除外してあるので、そのままでは push もされません）。
+どうしても使うなら、`flutter build web --release` のあと、VS Code の設定 `liveServer.settings.root` を `/build/web` にして、`build/web/index.html` を Go Live で開きます。
 
-次の「自動ビルド」に切り替えれば直ります。
+## 注意
 
-### 自動ビルドで公開する（おすすめ）
-
-`.github/workflows/deploy-pages.yml` を同梱しています。`main` ブランチに push するたびに、GitHub のサーバーが Flutter をビルドして公開します。
-
-1. zip を展開した内容を、リポジトリに入れて push する（`.github/workflows/deploy-pages.yml` が含まれていること。先頭が `.` のフォルダなので、見えないときは隠しファイルの表示をオンに）。ブランチ名が `main` でなければ、ファイルの `branches: [main]` を合わせる。
-2. GitHub のリポジトリ →「Settings」→ 左の「Pages」→「Build and deployment」の **Source** を **「GitHub Actions」** にする。
-3. 「Actions」タブで `Deploy to GitHub Pages` が緑のチェックになるのを待つ（数分）。赤い × のときは、開いて出ているエラーを教えてください。
-4. 公開先は `https://ユーザー名.github.io/リポジトリ名/`。Actions の実行結果にも URL が出ます。
-
-更新は、変更を `main` に push するだけです。
-
-注意：
-- サーバー側の Flutter は最新の stable です。手元で動いている版に合わせたいときは、`deploy-pages.yml` の `# flutter-version:` の行のコメントを外して、`flutter --version` で出た版を入れてください。
+- サーバー側の Flutter は、手元と同じ **3.24.3** に固定してあります（`deploy-pages.yml` の `flutter-version`）。手元の Flutter を新しくしたら（`flutter --version` で確認）、この行も同じ版に書き換えてください。`pubspec.lock` も一緒に push してください（手元で動いた部品の版を、サーバーでも使うため）。
 - リポジトリ名が `ユーザー名.github.io` のときだけ、公開先は `https://ユーザー名.github.io/`（フォルダなし）になります。ファイルが自動で切り替えます。
 - 公開先の URL のフォルダ名と、ビルド時の `--base-href` が食い違うと白い画面になります。リポジトリ名を変えたら、もう一度 push してビルドし直してください。
-
-### 手元でビルドして置く場合
-
-`flutter build web --release --base-href "/リポジトリ名/"` の `build/web` の中身を、`gh-pages` ブランチなどに置き、Pages の Source をそのブランチにします。`build/web` に `.nojekyll`（空のファイル）を入れておくと安全です。
+- 顔写真は遊んでいる人の端末（ブラウザ）の中だけに保存され、サーバーには送られません。
+- 自分の PC でビルドして `gh-pages` ブランチに置く方法もあります。その場合は `flutter build web --release --base-href "/リポジトリ名/"` の `build/web` の中身を置き、空の `.nojekyll` ファイルも入れ、Pages の Source をそのブランチにします。
 
 ## うまくいかないとき
 
 | 症状 | 確認すること |
 | --- | --- |
-| `firebase: command not found` | Node.js と `npm install -g firebase-tools` が済んでいるか。ターミナルを開き直す |
-| `Error: Failed to get Firebase project` | プロジェクト ID の打ち間違い。`firebase projects:list` で確認 |
-| Hosting のサイトが見つからない / not found | 3-1 の 5（コンソールで Hosting の「始める」）を済ませる |
-| 公開したのに白い画面のまま | ブラウザの開発者ツール（F12）→ Console の赤いエラーを教えてください。ブラウザの拡張機能（広告ブロックなど）を切って試すのも有効です |
-| 更新したのに古いまま | ページを 2 回読み込み直す。それでも古ければ、ブラウザのサイトデータを消す |
+| アプリではなく README だけ表示される | Settings → Pages → Source が「GitHub Actions」になっているか |
+| Actions が赤い × | 開いて、赤くなったステップのエラー文を教えてください |
+| 白い画面 / 最初の「よみこみ中」から進まない | F12 → Console の赤いエラーを教えてください。Network タブで `main.dart.js` などが赤（404）なら、URL のフォルダ名と `--base-href` の食い違いです。広告ブロックなどの拡張機能を切って試すのも有効です |
+| タイトルは出るが「はじめる」を押しても進まない | 公開版のアドレスの最後に `?debug=1` を付けて開く（例：`https://ユーザー名.github.io/リポジトリ名/?debug=1`）。画面の下に赤く「エラー: …」が出るので、その文を教えてください。F12 → Console の `gag_othello:` で始まる行も手がかりになります |
+| 更新したのに古いまま | `Ctrl + Shift + R`。それでも古ければ、タイトル画面下の `ver` の印を確認。ブラウザのサイトデータを消すと確実です |
 | 公開版で音が最初に鳴らない | ブラウザの自動再生ルールです。画面にさわると BGM が始まります（`flutter run` のときと同じ） |
-| ある日から急に見られなくなった | 無料枠の転送量が上限に達した可能性。Firebase コンソールの Hosting で使用量を確認。翌日になると戻ることがあります。プランの見直しや、音の軽量化を検討してください |
+| 公開版で赤いエラー表示が出ない | 仕様です。公開用ビルドでは隠しています。`?debug=1` を付けると出ます |

@@ -4,15 +4,15 @@
 ブラウザ試作版（`prototype/gag-othello.html`）で遊んで調整した仕様を、Flutter に移したものです。
 
 - 1人（コンピュータ対戦）／2人（向かい合わせ・同じ画面）
-- 赤い**ストレスゲージ**がたまり、MAX になったら**台パン**（長押し 0.9 秒）で石数を同数にして救済
+- 赤い**ストレスゲージ**は、角を取られる・5 枚以上返される・パスのほか、**枚数で負けていると毎ターン少しずつ**たまる。MAX になったら**台パン**（長押し 0.9 秒）＝盤の石を**ひっくり返して**石数を同数にして救済
   - 角は完全ランダム（占有済みの角は 1/2 で相手のものに）。端数は台パンした側へ
   - 相手の手番でも使える。1ゲームで平均 2 回前後になるよう調整済み
-  - 空きマス 4 以下は**ヒートアップ**：目が炎になり、BGM が速くなり、台パンは封印
+  - 空きマス 6 以下は**ヒートアップ**：目が炎になり、BGM が速くなり、台パンは封印
 - 打てる場所がないときは人間が「パス」ボタンを押す（押すとストレスがたまる。CPU は自動）
-- 勝った側の変顔が画面いっぱいに出る終局演出
+- 勝った側の顔が画面いっぱいに出る終局演出（顔は自動で変顔になる：ぎょろ目・ベロ・ぷよぷよ。撮影は通常顔の1枚だけ）
 - 音：BGM（タイトル / 対局 / ヒート）と効果音。**タイトル画面でも対局中でも** BGM・SE の音量を調整できます
 - オンライン対戦は**未実装**です
-- ウェブに公開する手順は **[DEPLOY.md](DEPLOY.md)**（Firebase Hosting / GitHub Pages）
+- ウェブに公開する手順は **[DEPLOY.md](DEPLOY.md)**（GitHub Pages。`main` に push すると自動でビルド・公開）。Firebase Hosting を使う場合は [DEPLOY-firebase.md](DEPLOY-firebase.md)
 
 > **動作確認について（先に読んでください）**
 > このプロジェクトは、Flutter / Dart が入っていない環境で書きました。**一度もコンパイル・実行していません。**
@@ -27,7 +27,7 @@
 
 ### 1. 用意するもの
 
-- [Flutter SDK](https://docs.flutter.dev/get-started/install)（stable。Dart 3.3 以上 = Flutter 3.19 以上）
+- [Flutter SDK](https://docs.flutter.dev/get-started/install)（stable。Dart 3.3 以上 = Flutter 3.19 以上。手元の確認は Flutter 3.24.3 / Dart 3.5.3）
 - VS Code の拡張機能 **Dart** と **Flutter**（このフォルダを開くと推奨表示が出ます）
 - 実機 / エミュレータ / Chrome のどれか（`flutter doctor` で確認）
 
@@ -75,8 +75,8 @@ VS Code では `F5`（`.vscode/launch.json` に debug / profile / release / Chro
 
 ## 遊び方の要点
 
-1. タイトル画面でモード、名前、顔写真（通常顔・変顔）を決めて「はじめる」。写真はなくても遊べます（コードで描いた初期顔が入っています）。
-2. 通常顔は切り抜きの画面で**赤い印を両目に合わせる**と、ヒートアップ時にそこが炎になります。
+1. タイトル画面でモード、名前、顔写真を決めて「はじめる」。写真はなくても遊べます（コードで描いた初期顔が入っています）。
+2. 顔写真は切り抜きの画面で**赤い印を両目に合わせる**と、ヒートアップ時にそこが炎に、終局の変顔ではそこがぎょろ目になります。
 3. 対局中の「おと」ボタンで BGM / SE の音量とミュートを調整。「タイトルへ」は確認ダイアログつき。
 4. 台パンボタンは**長押し**。ゲージ MAX でないとき、ヒートアップ中は押せません。CPU 側の台パンボタンは人間には押せません。
 
@@ -102,6 +102,7 @@ lib/
     player_panel.dart        アバター・ゲージ・台パンボタン
     effects.dart             バナー・集中線・ビネット・長押しオーバーレイ
     ending_overlay.dart      終局の顔面モザイク
+    funny_face.dart          通常顔を自動で変顔にして描く（目の位置を利用）
     crop_dialog.dart         顔写真の切り抜き
     sound_controls.dart      音量スライダー（タイトルと対局中で共用）
     theme.dart / visuals.dart
@@ -110,9 +111,10 @@ assets/fonts/                日本語フォント（Noto Sans CJK JP の Bold /
 test/                        engine_test.dart（照合 + 性質テスト）, golden/
 tool/                        render_audio.py, build_fonts.py, gen_golden.js, sim.js, post_create.py
 web/                         ウェブ用のアイコン（favicon.png, icons/）とフォントのライセンス（NOTICE-fonts.txt）
-firebase.json                Firebase Hosting の設定（公開フォルダ build/web）
+firebase.json                Firebase Hosting の設定（今は使わない。GitHub Pages では不要）
 .github/workflows/        GitHub Pages への自動公開（deploy-pages.yml）
-DEPLOY.md                    ウェブ公開の手順書
+DEPLOY.md                    ウェブ公開の手順書（GitHub Pages）
+DEPLOY-firebase.md           （別の方法）Firebase Hosting の手順書
 prototype/gag-othello.html   ブラウザ試作版（調整の元）
 ```
 
@@ -120,12 +122,12 @@ prototype/gag-othello.html   ブラウザ試作版（調整の元）
 
 | 何を | どこを |
 | --- | --- |
-| ゲージの増え方（角 40、5 枚以上返し 15、パス 25 / 連続 35、劣勢 5） | `lib/core/engine.dart` の `GaugeCfg` |
-| 台パンの長押し時間（900ms）、ヒートアップの空きマス数（4） | 同 `Cfg` |
+| ゲージの増え方（角 52、5 枚以上返し 20、パス 33 / 連続 46、枚数で負けていると毎ターン「差 ÷ 4（切り上げ）」・最大 5） | `lib/core/engine.dart` の `GaugeCfg` |
+| 台パンの長押し時間（900ms）、ヒートアップの空きマス数（6） | 同 `Cfg` |
 | CPU の強さ | 同 `pickMove`（評価値に足すノイズの幅 `* 4`） |
 | 色・文字の太さ | `lib/ui/theme.dart` |
 
-台パンの発動回数は、ボット同士の 14,794 局面で「1 ゲームあたり約 1.8 回」になるようゲージ値を決めています。値を変えたら試作版の `node tool/sim.js prototype/gag-othello.html` でボット同士の検証ができます。ただしこれは試作版（JS）のエンジンを動かすので、`prototype/gag-othello.html` の ENGINE ブロックの `CFG` も同じ値に変えてから実行してください。
+台パンの発動回数は、ボット同士のシミュレーションで「1 ゲームあたり約 2.3 回」になるようゲージ値を決めています（ガチモード 6 空き・ゲージ 1.3 倍の版）。値を変えたら試作版の `node tool/sim.js prototype/gag-othello.html` でボット同士の検証ができます。ただしこれは試作版（JS）のエンジンを動かすので、`prototype/gag-othello.html` の ENGINE ブロックの `CFG` も同じ値に変えてから実行してください。
 
 ## 音を作り直す
 
@@ -156,7 +158,7 @@ flutter test
 - **Web で最初に音が鳴らない**：ブラウザの自動再生ルールです。画面にさわると BGM が始まります。
 - **iOS で写真を選ぼうとして落ちる**：手順 3 の Info.plist の説明文が入っているか確認してください。
 - **画面が進まない**：「はじめる」は画面の下に固定してあります。押しても変わらないときは、ブラウザの開発者ツール（F12）の Console に出ている赤いエラーを教えてください。
-- **公開版（`--release`）で赤いエラー表示が出ない**：仕様です。公開用ビルドでは隠しています。テスターに試してもらうときは `flutter build web --release --dart-define=SHOW_ERRORS=true`。
+- **公開版（`--release`）で赤いエラー表示が出ない**：仕様です。公開用ビルドでは隠しています。公開版のアドレスの最後に `?debug=1` を付けて開くと出ます（例：`https://ユーザー名.github.io/リポジトリ名/?debug=1`）。
 - **Android でカメラが起動しない**：端末にカメラがない（エミュレータ等）場合は「ライブラリからえらぶ」を使ってください。
 - **`flutter analyze` で deprecated の警告**：新しい SDK では一部の API（`Matrix4.translate` など）が非推奨になっています。動作には影響しませんが、気になるときは指示どおりの新 API に置き換えてください。
 
