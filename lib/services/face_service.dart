@@ -53,8 +53,8 @@ ui.Rect _oval(double cx, double cy, double rx, double ry) =>
     ui.Rect.fromCenter(center: ui.Offset(cx, cy), width: rx * 2, height: ry * 2);
 
 /// 写真がなくても遊べるよう、コードで描く初期顔（256x256）。
-/// [p] は 1 か 2、[kind] は FaceKind.normal / FaceKind.funny。
-Future<ui.Image> drawDefaultFace(int p, String kind) async {
+/// [p] は 1 か 2。
+Future<ui.Image> drawDefaultFace(int p) async {
   const double s = 256;
   final rec = ui.PictureRecorder();
   final g = ui.Canvas(rec, ui.Rect.fromLTWH(0, 0, s, s));
@@ -63,7 +63,6 @@ Future<ui.Image> drawDefaultFace(int p, String kind) async {
   final skin = one ? const ui.Color(0xFFFFD2A6) : const ui.Color(0xFFFFE0CC);
   final hair = one ? const ui.Color(0xFF4A2A14) : const ui.Color(0xFF6B3FA0);
   final cheek = one ? const ui.Color(0x8CFF786E) : const ui.Color(0x8CFF78A0);
-  final bool fun = kind == FaceKind.funny;
 
   g.drawRect(ui.Rect.fromLTWH(0, 0, s, s), _fill(bg));
 
@@ -99,47 +98,32 @@ Future<ui.Image> drawDefaultFace(int p, String kind) async {
   g.drawPath(hp, _stroke(_ink, 6));
 
   // ほっぺ
-  g.drawOval(_oval(58, 158, fun ? 24 : 17, fun ? 20 : 12), _fill(cheek));
-  g.drawOval(_oval(198, 158, fun ? 24 : 17, fun ? 20 : 12), _fill(cheek));
+  g.drawOval(_oval(58, 158, 17, 12), _fill(cheek));
+  g.drawOval(_oval(198, 158, 17, 12), _fill(cheek));
 
   // 目
   const exs = <double>[87, 169];
   const double ey = 113;
   for (var k = 0; k < 2; k++) {
     final x = exs[k];
-    final white = _oval(x, ey, fun ? 25 : 21, fun ? 29 : 25);
+    final white = _oval(x, ey, 21, 25);
     g.drawOval(white, _fill(const ui.Color(0xFFFFFFFF)));
     g.drawOval(white, _stroke(_ink, 5));
-    if (fun) {
-      g.drawCircle(ui.Offset(x + (k == 1 ? -11 : 11), ey - 6), 10, _fill(_ink));
-      g.drawCircle(ui.Offset(x + (k == 1 ? -8 : 14), ey - 10), 3.5, _fill(const ui.Color(0xFFFFFFFF)));
-    } else {
-      g.drawCircle(ui.Offset(x, ey + 3), 10, _fill(_ink));
-      g.drawCircle(ui.Offset(x + 4, ey - 2), 3.5, _fill(const ui.Color(0xFFFFFFFF)));
-    }
+    g.drawCircle(ui.Offset(x, ey + 3), 10, _fill(_ink));
+    g.drawCircle(ui.Offset(x + 4, ey - 2), 3.5, _fill(const ui.Color(0xFFFFFFFF)));
   }
 
   // まゆ・口
   final line6 = _stroke(_ink, 6);
-  if (fun) {
-    g.drawLine(const ui.Offset(62, 84), const ui.Offset(108, 92), line6);
-    g.drawLine(const ui.Offset(150, 84), const ui.Offset(194, 70), line6);
-    g.drawOval(_oval(128, 180, 32, 22), _fill(_ink));
-    final tongue = _oval(128, 198, 19, 17);
-    g.drawOval(tongue, _fill(const ui.Color(0xFFFF6F91)));
-    g.drawOval(tongue, _stroke(_ink, 4));
-    g.drawLine(const ui.Offset(128, 190), const ui.Offset(128, 206), _stroke(_ink, 4));
-  } else {
-    g.drawLine(const ui.Offset(64, 92), const ui.Offset(108, 90), line6);
-    g.drawLine(const ui.Offset(148, 90), const ui.Offset(192, 92), line6);
-    g.drawArc(
-      ui.Rect.fromCircle(center: const ui.Offset(128, 170), radius: 26),
-      0.15 * 3.141592653589793,
-      0.70 * 3.141592653589793,
-      false,
-      line6,
-    );
-  }
+  g.drawLine(const ui.Offset(64, 92), const ui.Offset(108, 90), line6);
+  g.drawLine(const ui.Offset(148, 90), const ui.Offset(192, 92), line6);
+  g.drawArc(
+    ui.Rect.fromCircle(center: const ui.Offset(128, 170), radius: 26),
+    0.15 * 3.141592653589793,
+    0.70 * 3.141592653589793,
+    false,
+    line6,
+  );
 
   final pic = rec.endRecording();
   final img = await pic.toImage(256, 256);
@@ -147,7 +131,7 @@ Future<ui.Image> drawDefaultFace(int p, String kind) async {
   return img;
 }
 
-/// 4つの顔（1P/2P × 通常/変顔）を持つ。ユーザーの写真があればそれ、なければ初期顔。
+/// 顔（1P / 2P）を持つ。ユーザーの写真があればそれ、なければ初期顔。
 class FaceStore extends ChangeNotifier {
   final Map<String, FaceAsset> _defaults = <String, FaceAsset>{};
   final Map<String, FaceAsset> _custom = <String, FaceAsset>{};
@@ -163,7 +147,7 @@ class FaceStore extends ChangeNotifier {
   Future<void> init() async {
     for (final p in <int>[1, 2]) {
       for (final kind in FaceKind.all) {
-        final img = await drawDefaultFace(p, kind);
+        final img = await drawDefaultFace(p);
         _defaults[keyOf(p, kind)] = FaceAsset(image: img, eyes: defaultEyes);
       }
     }

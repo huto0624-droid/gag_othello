@@ -24,23 +24,36 @@ Future<void> main() async {
     return true;
   };
 
-  try {
-    await SystemChrome.setPreferredOrientations(<DeviceOrientation>[
-      DeviceOrientation.portraitUp,
-      DeviceOrientation.portraitDown,
-    ]);
-  } catch (_) {
-    // デスクトップ / Web では無視してよい
+  // 向きの固定はスマホだけ。Web では意味がなく、ブラウザによっては返事が返ってこず、
+  // ここで待ち続けて最初の画面が出なくなることがあるため、Web ではやらない。
+  if (!kIsWeb) {
+    try {
+      await SystemChrome.setPreferredOrientations(<DeviceOrientation>[
+        DeviceOrientation.portraitUp,
+        DeviceOrientation.portraitDown,
+      ]).timeout(const Duration(seconds: 2));
+    } catch (_) {
+      // デスクトップなどでは無視してよい
+    }
   }
 
   final audio = AudioService();
   final faces = FaceStore();
   final app = AppState(audio: audio, faces: faces);
 
-  // 顔（初期顔のお絵かき）→ 音 → 保存済み設定の順で準備する
+  // 顔（初期顔のお絵かき）→ 音 → 保存済み設定の順で準備する。
+  // 音と保存設定は、なくても遊べる。何かの理由で返事が来なくても、数秒で見切って先へ進む
+  // （ここで止まると、いつまでも最初の画面が出ない）。
+  debugPrint('gag_othello: start');
   await faces.init();
-  await audio.init();
-  await app.init();
+  debugPrint('gag_othello: faces ready');
+  await audio.init().timeout(const Duration(seconds: 4), onTimeout: () {
+    debugPrint('gag_othello: audio init timed out (skipped)');
+  });
+  await app.init().timeout(const Duration(seconds: 4), onTimeout: () {
+    debugPrint('gag_othello: settings load timed out (skipped)');
+  });
+  debugPrint('gag_othello: runApp');
 
   runApp(GagOthelloApp(app: app));
 }

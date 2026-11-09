@@ -37,7 +37,7 @@ void main() {
       return b;
     }
 
-    test('角を取ると相手に +40（reason=corner）', () {
+    test('角を取ると相手に加算（reason=corner）', () {
       final game = Game(rng: math.Random(1));
       final b = centerOnly();
       b[1] = 2;
@@ -50,10 +50,10 @@ void main() {
       expect(res.gauge.first.p, 2);
       expect(res.gauge.first.delta, GaugeCfg.corner);
       expect(res.gauge.first.reason, StressReason.corner);
-      expect(game.gauge, <int>[0, 40]);
+      expect(game.gauge, <int>[0, GaugeCfg.corner]);
     });
 
-    test('1手で5枚以上返すと相手に +15（reason=bigflip）', () {
+    test('1手で5枚以上返すと相手に加算（reason=bigflip）', () {
       final game = Game(rng: math.Random(1));
       final b = centerOnly();
       b[0] = 1;
@@ -69,7 +69,7 @@ void main() {
       expect(res.gauge.single.reason, StressReason.bigflip);
     });
 
-    test('手動パス：待ち→パスで +25、続けてのパスは +35', () {
+    test('手動パス：待ち→パスで加算、続けてのパスはさらに多く', () {
       final game = Game(rng: math.Random(1), manualPass: true);
       final b = List<int>.filled(64, 0);
       // 1P だけが打てる「挟める形」を3か所。2P は打てる場所が一つもない。
@@ -122,19 +122,19 @@ void main() {
   });
 
   group('台パン', () {
-    test('空き4以下は封印、5以上なら相手の手番でも使える', () {
+    test('空き6以下は封印、7以上なら相手の手番でも使える', () {
       final game = Game(rng: math.Random(3));
       game.b = List<int>.generate(64, (int i) => i % 2 == 0 ? 1 : 2);
       game.gauge = <int>[100, 100];
-      for (final i in <int>[10, 20, 30, 40]) {
+      for (final i in <int>[10, 20, 30, 40, 50, 60]) {
         game.b[i] = 0;
       }
-      expect(game.empties(), 4);
+      expect(game.empties(), 6);
       expect(game.isHeat, isTrue);
       expect(game.canDaipan(1), isFalse);
       expect(game.daipan(1), isNull);
 
-      game.b[50] = 0; // 空き5
+      game.b[62] = 0; // 空き7
       expect(game.isHeat, isFalse);
       expect(game.turn, 1);
       expect(game.canDaipan(2), isTrue, reason: '自分の番でなくても台パンできる');
@@ -146,9 +146,9 @@ void main() {
       expect(game.gauge[0], 100, reason: '相手のゲージは減らない');
       if (res.tier < 4) {
         final c = game.counts();
-        expect(c[0] + c[1], 59);
-        expect(c[1], 30, reason: '端数は台パンした側');
-        expect(c[0], 29);
+        expect(c[0] + c[1], 57);
+        expect(c[1], 29, reason: '端数は台パンした側');
+        expect(c[0], 28);
       }
     });
 

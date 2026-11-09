@@ -203,7 +203,7 @@ class AudioService {
     startBgm(Bgm.menu);
   }
 
-  /// 空きマス4以下のヒートアップ：BGM をテンポアップ版に切り替える
+  /// ヒートアップ（空きマスが少ない終盤）：BGM をテンポアップ版に切り替える
   void setHeat(bool heat) {
     if (heat) {
       if (_track == Bgm.game) startBgm(Bgm.heat);

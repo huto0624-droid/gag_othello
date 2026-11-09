@@ -363,6 +363,14 @@ class HoldOverlay extends StatelessWidget {
                       ),
                     ),
                   ),
+                  Positioned(
+                    left: 0,
+                    right: 0,
+                    top: box.maxHeight * 0.14 + fs * 1.5 + 40,
+                    child: Center(
+                      child: OutlinedText('もうすぐ 石をひっくり返す！', size: 20, fill: kPaper, stroke: 5, body: true, shadow: false),
+                    ),
+                  ),
                 ],
               );
             },

@@ -1,4 +1,5 @@
 import 'dart:math' as math;
+import 'dart:ui' show BlurStyle, MaskFilter;
 
 import 'package:flutter/material.dart';
 
@@ -94,11 +95,8 @@ class BoardPainter extends CustomPainter {
       ..style = PaintingStyle.stroke
       ..strokeWidth = 2
       ..color = kFeltD;
-    final hintFill = Paint()..color = turnColor.withAlpha(178);
-    final hintLine = Paint()
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 2
-      ..color = kInk;
+    // 置けるマスの光。最初の数秒は消えていて、そのあとうっすらフェードインする
+    final hs = ctl.hintStrength;
     final lastLine = Paint()
       ..style = PaintingStyle.stroke
       ..strokeWidth = 3
@@ -115,9 +113,13 @@ class BoardPainter extends CustomPainter {
       }
       canvas.drawRRect(RRect.fromRectAndRadius(rc, const Radius.circular(6)), feltPaint);
       canvas.drawRRect(RRect.fromRectAndRadius(rc.deflate(1), const Radius.circular(5)), edge);
-      if (ctl.hints.contains(i)) {
-        canvas.drawCircle(rc.center, cell * 0.16, hintFill);
-        canvas.drawCircle(rc.center, cell * 0.16, hintLine);
+      if (hs > 0 && ctl.hints.contains(i)) {
+        // ぼんやりした光の輪（にじみ）と、うすい印
+        final halo = Paint()
+          ..color = turnColor.withAlpha((hs * 120).round())
+          ..maskFilter = MaskFilter.blur(BlurStyle.normal, cell * 0.14);
+        canvas.drawCircle(rc.center, cell * 0.26, halo);
+        canvas.drawCircle(rc.center, cell * 0.15, Paint()..color = turnColor.withAlpha((hs * 96).round()));
       }
       if (i == ctl.lastIdx && ctl.cells[i].owner != 0) {
         final ring = Rect.fromCircle(center: rc.center, radius: cell / 2 - 2);

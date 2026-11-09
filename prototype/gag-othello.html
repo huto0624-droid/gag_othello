@@ -364,7 +364,7 @@ button{font:inherit;color:inherit}
         <li>打てる場所がないときは「パス」ボタンを押します。押すとストレスがたまります。</li>
         <li>ゲージがMAXになったら「台パン」ボタンを長押し。相手の番でも使えます。コマが宙を舞い、石数が同数になります（端数は台パンした側）。</li>
         <li>ただし角は完全ランダム。1/2で相手のものになるので、勝っているときの台パンは損です。</li>
-        <li>空きマスが4つ以下になるとヒートアップ。目が燃え、机が熱すぎて台パンは封印されます。</li>
+        <li>空きマスが6つ以下になるとヒートアップ。目が燃え、机が熱すぎて台パンは封印されます。</li>
         <li>終局後は、勝った側の変顔が画面いっぱいに。負けた側は笑ってOK。</li>
       </ul>
     </details>
@@ -427,17 +427,17 @@ const Engine = (function () {
   /* 調整用パラメータ。Flutter版では Remote Config に置く想定 */
   const CFG = {
     holdMs: 900,          // 台パンの長押し時間
-    sealEmpties: 4,       // 空きマスがこの数以下でヒートアップ（台パン封印・ゲージ停止）
+    sealEmpties: 6,       // 空きマスがこの数以下でヒートアップ（台パン封印・ゲージ停止）
     gauge: {
       max: 100,
-      corner: 40,         // 角を取られた
+      corner: 52,         // 角を取られた
       bigFlipMin: 5,      // 1手でこの枚数以上返された
-      bigFlip: 15,
-      pass: 25,           // 自分がパス
-      passStreak: 35,     // 連続パス
-      lateFromMove: 20,   // この手数以降
-      lateShare: 0.4,     // 石の割合がこれ未満だと手番ごとに加算
-      late: 5
+      bigFlip: 20,
+      pass: 33,           // 自分がパス
+      passStreak: 46,     // 連続パス
+      behindFromMove: 6,  // この手数以降、枚数で負けている側に手番ごとに加算
+      behindStep: 4,      // 相手より何枚少ないごとに +1（切り上げ）
+      behindMax: 5        // 1回の加算の上限
     }
   };
   const DIRS = [[-1,-1],[-1,0],[-1,1],[0,-1],[0,1],[1,-1],[1,0],[1,1]];
@@ -562,10 +562,13 @@ const Engine = (function () {
       this._finish(res);
       return res;
     }
+    /* 枚数で負けている側に、手番ごとに少しずつ：相手との差 ÷ behindStep（切り上げ）、最大 behindMax */
     _late(res) {
-      if (this.moveNo < CFG.gauge.lateFromMove) return;
+      if (this.moveNo < CFG.gauge.behindFromMove) return;
       const c = this.counts(), t = this.turn;
-      if (c[t - 1] / (c[0] + c[1]) < CFG.gauge.lateShare) this.addGauge(res, t, CFG.gauge.late, 'late');
+      const d = c[2 - t] - c[t - 1];
+      if (d <= 0) return;
+      this.addGauge(res, t, Math.min(CFG.gauge.behindMax, Math.ceil(d / CFG.gauge.behindStep)), 'late');
     }
     _finish(res) {
       res.over = this.over;

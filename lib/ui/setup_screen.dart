@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 
+import '../core/engine.dart' show Cfg;
 import '../core/models.dart';
 import '../services/app_state.dart';
 import '../services/audio_service.dart';
@@ -56,11 +57,14 @@ class _SetupScreenState extends State<SetupScreen> {
         final t = _names[i].text.trim();
         app.setName(i + 1, t.isEmpty ? 'プレイヤー${i + 1}' : t);
       }
+      debugPrint('gag_othello: start pressed');
       await Navigator.of(context).push(
         MaterialPageRoute<void>(builder: (BuildContext _) => GameScreen(app: app)),
       );
     } catch (e) {
       reportError('対局を始められませんでした: $e');
+      // 公開版では赤いエラー表示が隠れているので、タイトル画面の文章でも知らせる
+      if (mounted) setState(() => _note = '対局を始められませんでした（$e）');
       return;
     }
     // 対局から戻ったらメニューBGMへ
@@ -76,8 +80,7 @@ class _SetupScreenState extends State<SetupScreen> {
       final bytes = await x.readAsBytes();
       final img = await decodeImageBytes(bytes);
       if (!mounted) return;
-      final label = kind == FaceKind.normal ? '通常顔' : '変顔';
-      final asset = await showCropDialog(context, image: img, kind: kind, title: '${p}P の$labelを調整');
+      final asset = await showCropDialog(context, image: img, kind: kind, title: '${p}P の顔を調整');
       if (asset != null) {
         await app.saveFace(p, kind, asset);
         if (mounted) setState(() => _note = '写真を保存しました。');
@@ -212,6 +215,37 @@ class _SetupScreenState extends State<SetupScreen> {
         ),
         const SizedBox(height: 14),
 
+        // ---- 台パンとは？（ルールを開かなくても分かるように）
+        InkBox(
+          radius: 14,
+          shadow: 3,
+          padding: const EdgeInsets.fromLTRB(14, 10, 14, 12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Text('台パンとは？', style: displayStyle(16, color: kGauge)),
+              const SizedBox(height: 4),
+              Text.rich(
+                TextSpan(
+                  style: bodyStyle(13, height: 1.5),
+                  children: <InlineSpan>[
+                    const TextSpan(text: 'ストレスゲージが MAX のとき「台パン」ボタンを長押しすると、盤の石を'),
+                    TextSpan(
+                      text: 'ひっくり返して',
+                      style: bodyStyle(13, color: kGauge, weight: FontWeight.w900, height: 1.5),
+                    ),
+                    TextSpan(
+                      text: '石の数を同数にする技です。負けていても追いつけます！'
+                          'ただし、残り${Cfg.sealEmpties}マス以下の「ヒートアップ」中は封印されます。',
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 14),
+
         // ---- あそびかた
         Row(
           children: <Widget>[
@@ -282,18 +316,20 @@ class _SetupScreenState extends State<SetupScreen> {
             ),
           ),
         ),
+        const SizedBox(height: 10),
+        Center(child: Text('ver $kBuildLabel', style: bodyStyle(11))),
       ],
     );
   }
 
   static const List<String> _rules = <String>[
-    'ふつうのオセロです。光っているマスに自分の顔を置きます。',
-    '赤いストレスゲージは、角を取られる・一気に5枚以上返される・パスになる・劣勢が続くと、たまります。たまるほど顔がイライラしてきます。',
+    'ふつうのオセロです。自分の顔を置きます。置けるマスは、少しまつとうっすら光ります。',
+    '赤いストレスゲージは、角を取られる・一気に5枚以上返される・パスになる、そして枚数で負けていると毎ターン少しずつ、たまります。たまるほど顔がイライラしてきます。',
     '打てる場所がないときは「パス」ボタンを押します。押すとストレスがたまります。',
-    'ゲージがMAXになったら「台パン」ボタンを長押し。相手の番でも使えます。コマが宙を舞い、石数が同数になります（端数は台パンした側）。',
+    '台パンは、盤の石をひっくり返す技です。ゲージがMAXになったら「台パン」ボタンを長押し（相手の番でも使えます）。石が宙を舞い、ひっくり返って、石数が同数になります（端数は台パンした側）。',
     'ただし角は完全ランダム。1/2で相手のものになるので、勝っているときの台パンは損です。',
-    '空きマスが4つ以下になるとヒートアップ。目が燃え、机が熱すぎて台パンは封印されます。',
-    '終局後は、勝った側の変顔が画面いっぱいに。負けた側は笑ってOK。',
+    '空きマスが${Cfg.sealEmpties}つ以下になるとヒートアップ。目が燃え、机が熱すぎて台パンは封印されます。',
+    '終局後は、勝った側の顔が画面いっぱいに。ぎょろ目・ベロ・ぷよぷよの「変顔」に自動で変身します（撮り直し不要）。負けた側は笑ってOK。',
   ];
 
   Widget _segment(GameMode m, String title, String sub) {
@@ -378,8 +414,6 @@ class _SetupScreenState extends State<SetupScreen> {
           ),
           const SizedBox(height: 10),
           _slot(p, FaceKind.normal),
-          const SizedBox(height: 8),
-          _slot(p, FaceKind.funny),
         ],
       ),
     );
@@ -389,8 +423,8 @@ class _SetupScreenState extends State<SetupScreen> {
     final color = ownerColor(p);
     final f = app.faces.get(p, kind);
     final custom = app.faces.isCustom(p, kind);
-    final title = kind == FaceKind.normal ? '通常顔' : '変顔';
-    final sub = kind == FaceKind.normal ? '目の位置あわせあり（炎が出ます）' : '勝ったとき画面いっぱいに出ます';
+    const title = 'かお';
+    const sub = '目の位置あわせあり（炎が出ます）。勝ったときは画面いっぱいに出ます。';
     return Row(
       children: <Widget>[
         Container(

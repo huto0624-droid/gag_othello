@@ -5,13 +5,15 @@ import 'package:flutter/material.dart';
 import '../core/models.dart';
 import '../core/util.dart';
 import '../services/app_state.dart';
+import 'funny_face.dart';
 import 'theme.dart';
 import 'visuals.dart';
 
 const double _deg = math.pi / 180;
 
-/// 終局：勝った側の変顔が画面いっぱいにモザイク状に降りそそぐ。
-/// 引き分けのときは、ふたりの変顔が交互に並ぶ。
+/// 終局：勝った側の顔が画面いっぱいにモザイク状に降りそそぐ。
+/// 引き分けのときは、ふたりの顔が交互に並ぶ。
+/// 顔は自動で「変顔」になる（ぎょろ目・ベロ・ぷよぷよ。撮影は不要）。
 class EndingOverlay extends StatefulWidget {
   const EndingOverlay({
     super.key,
@@ -90,7 +92,7 @@ class _EndingOverlayState extends State<EndingOverlay> with TickerProviderStateM
                     BoxShadow(color: ownerColor(o), spreadRadius: ring),
                   ],
                 ),
-                child: ClipOval(child: RawImage(image: faces.get(o, FaceKind.funny).image, fit: BoxFit.cover)),
+                child: ClipOval(child: FunnyFace(asset: faces.get(o, FaceKind.normal))),
               );
             }
 
@@ -122,8 +124,9 @@ class _EndingOverlayState extends State<EndingOverlay> with TickerProviderStateM
                                 border: Border.all(color: kInk, width: 3),
                               ),
                               padding: const EdgeInsets.all(6),
+                              // 小さなタイルは、止めた絵（歪みなし）の変顔にして軽くする
                               child: ClipOval(
-                                child: RawImage(image: faces.get(o, FaceKind.funny).image, fit: BoxFit.cover),
+                                child: FunnyFace(asset: faces.get(o, FaceKind.normal), animated: false),
                               ),
                             ),
                           ),
@@ -146,7 +149,7 @@ class _EndingOverlayState extends State<EndingOverlay> with TickerProviderStateM
                 : '引き分け！ ${info.n1} 対 ${info.n2}';
             final capBody = win != 0
                 ? 'おめでとう。そして、この変顔が全画面です。${app.nameOf(loser)} は笑っていいよ。'
-                : 'ふたりとも仲よく変顔の刑です。';
+                : 'ふたりとも仲よく全画面の刑です。';
 
             final giantSize = math.min(w * 0.6, math.min(h * 0.36, 400.0));
             final duoSize = math.min(w * 0.4, math.min(h * 0.26, 260.0));
@@ -158,7 +161,7 @@ class _EndingOverlayState extends State<EndingOverlay> with TickerProviderStateM
                 final pw = Curves.easeOutBack.transform(_seg(1.9, 2.9));
                 final wigK = _seg(3.0, 3.1) > 0 ? (_wig.value * 2 - 1) : 0.0;
                 final headFs = clampD(w * 0.16, 44, 93);
-                // 変顔が上から落ちてくる
+                // 顔が上から落ちてくる
                 final pg = Curves.easeOutBack.transform(_seg(1.5, 2.4));
                 final pc = _seg(2.4, 3.0);
                 final pb = _seg(2.7, 3.3);

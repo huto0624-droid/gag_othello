@@ -28,8 +28,9 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          # 手元で動いている版に合わせたいときは、次の行のコメントを外して版を入れる（flutter --version で確認）
-          # flutter-version: 3.41.5
+          # 手元（flutter --version）と同じ版にそろえる。pubspec.lock もこの版で作られているので、ずれると失敗しやすい。
+          # 手元の Flutter を新しくしたときは、ここも同じ版に書き換える。
+          flutter-version: 3.24.3
           cache: true
 
       # 公開先のフォルダ名（https://ユーザー名.github.io/リポジトリ名/）に合わせる。
@@ -49,10 +50,10 @@ jobs:
       - run: flutter pub get
       - run: flutter build web --release --base-href "${{ steps.base.outputs.href }}"
 
-      - uses: actions/configure-pages@v6
+      - uses: actions/configure-pages@v5
       - uses: actions/upload-pages-artifact@v4
         with:
           path: build/web
 
       - id: deployment
-        uses: actions/deploy-pages@v5
+        uses: actions/deploy-pages@v4

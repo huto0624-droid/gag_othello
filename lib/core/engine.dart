@@ -14,33 +14,34 @@ class Cfg {
   static const int holdMs = 900;
 
   /// 空きマスがこの数以下になると「ヒートアップ」（台パン封印・ゲージ停止）
-  static const int sealEmpties = 4;
+  static const int sealEmpties = 6;
 }
 
-/// ストレスゲージの調整値。ボット同士 14,794 局面のシミュレーションで
-/// 「1ゲームあたり台パン約 1.8 回」になるよう合わせてある。
+/// ストレスゲージの調整値（ガチモードは空き 6・ゲージは 1.3 倍の版）。
+/// ボット同士のシミュレーションで「1ゲームあたり台パン約 2.3 回」になるよう合わせてある。
 class GaugeCfg {
   GaugeCfg._();
 
   static const int max = 100;
 
   /// 角を取られた
-  static const int corner = 40;
+  static const int corner = 52;
 
   /// 1手でこの枚数以上返された
   static const int bigFlipMin = 5;
-  static const int bigFlip = 15;
+  static const int bigFlip = 20;
 
   /// 自分がパス
-  static const int pass = 25;
+  static const int pass = 33;
 
   /// 連続パス
-  static const int passStreak = 35;
+  static const int passStreak = 46;
 
-  /// この手数以降、石の割合が lateShare 未満だと手番ごとに加算
-  static const int lateFromMove = 20;
-  static const double lateShare = 0.4;
-  static const int late = 5;
+  /// この手数以降、枚数で負けている側に手番ごとに少しずつ加算する。
+  /// 加算量 = 相手との差 ÷ behindStep（切り上げ）。1回あたり behindMax が上限。
+  static const int behindFromMove = 6;
+  static const int behindStep = 4;
+  static const int behindMax = 5;
 }
 
 /// ゲージが増えた理由
@@ -381,13 +382,15 @@ class Game {
     return res;
   }
 
+  /// 枚数で負けている側に、手番ごとに少しずつストレスを足す
   void _late(TurnResult res) {
-    if (moveNo < GaugeCfg.lateFromMove) return;
+    if (moveNo < GaugeCfg.behindFromMove) return;
     final c = counts();
     final t = turn;
-    if (c[t - 1] / (c[0] + c[1]) < GaugeCfg.lateShare) {
-      _addGauge(res, t, GaugeCfg.late, StressReason.late);
-    }
+    final d = c[2 - t] - c[t - 1]; // 相手より何枚少ないか
+    if (d <= 0) return;
+    final v = (d + GaugeCfg.behindStep - 1) ~/ GaugeCfg.behindStep; // 切り上げ
+    _addGauge(res, t, math.min(GaugeCfg.behindMax, v), StressReason.late);
   }
 
   void _finish(TurnResult res) {

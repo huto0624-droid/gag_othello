@@ -448,7 +448,7 @@ class _VeinPainter extends CustomPainter {
   bool shouldRepaint(covariant _VeinPainter old) => false;
 }
 
-/// 台パンボタン。長押し（0.9秒）で発動。ゲージが足りない／ヒートアップ中は押せない。
+/// 台パンボタン（盤の石をひっくり返す技）。長押し（0.9秒）で発動。ゲージが足りない／ヒートアップ中は押せない。
 class _DaipanButton extends StatelessWidget {
   const _DaipanButton({required this.ctl, required this.p, required this.clock});
 
@@ -511,7 +511,7 @@ class _DaipanButton extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Text('台パン', style: displayStyle(18, color: fg, height: 1.1)),
-              Text(ps.btnSub, style: bodyStyle(10.5, color: fg, height: 1.2)),
+              Text(ps.btnSub, textAlign: TextAlign.center, style: bodyStyle(10.5, color: fg, height: 1.2)),
             ],
           ),
           if (sealed) const Positioned.fill(child: _Chain()),
@@ -536,7 +536,7 @@ class _DaipanButton extends StatelessWidget {
       child: Semantics(
         button: true,
         enabled: ps.btnReady,
-        label: cpuSide ? 'CPUの台パン（操作できません）' : '${p}Pの台パン。長押しで発動',
+        label: cpuSide ? 'CPUの台パン（操作できません）' : '${p}Pの台パン。長押しで、盤の石をひっくり返して同数にする',
         child: Listener(
           behavior: HitTestBehavior.opaque,
           onPointerDown: (PointerDownEvent e) => ctl.startHold(p),

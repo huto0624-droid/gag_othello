@@ -117,7 +117,7 @@ class _CropDialogState extends State<_CropDialog> {
   Widget build(BuildContext context) {
     final hint = _isNormal
         ? '丸の中に顔を入れて、赤い印を両目に合わせてください。印は動かせます。ここに炎が出ます。'
-        : '丸の中に変顔を入れてください。ドラッグで位置、スライダーで大きさを変えられます。';
+        : '丸の中に顔を入れてください。ドラッグで位置、スライダーで大きさを変えられます。';
     return Dialog(
       backgroundColor: Colors.transparent,
       elevation: 0,

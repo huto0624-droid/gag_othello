@@ -16,7 +16,13 @@ import '../services/face_service.dart';
 import 'disc_painter.dart';
 import 'visuals.dart';
 
-const String kDefaultMsg = '光っているマスに置こう。ストレスがたまったら「台パン」を長押し。';
+const String kDefaultMsg = '置けるマスは、少しまつとうっすら光ります。ゲージがMAXなら「台パン」を長押し＝盤の石をひっくり返して同数に！';
+
+/// 手番が始まってから、置けるマスが光り出すまでの時間（ミリ秒）
+const int kHintDelayMs = 3000;
+
+/// 光が「うっすら」見えるまでのフェードイン時間（ミリ秒）
+const int kHintFadeMs = 900;
 
 int _dist(int a, int b) => math.max(((a >> 3) - (b >> 3)).abs(), ((a & 7) - (b & 7)).abs());
 
@@ -64,6 +70,22 @@ class GameController extends ChangeNotifier {
   int lead = 0;
   bool heat = false;
   Set<int> hints = <int>{};
+
+  /// 置けるマスを出してよい手番か（render() で決まる）
+  bool _hintsWanted = false;
+
+  /// 手番が始まってからの経過時間。置けるマスの光り方（[hintStrength]）に使う
+  final Stopwatch _hintWatch = Stopwatch();
+
+  /// 置けるマスの光の強さ（0 = 見えない、1 = はっきり）。最初の 3 秒は 0、そのあとフェードイン。
+  /// 盤は毎フレーム描き直されるので、時間の経過はこの値を読むだけで反映される。
+  double get hintStrength {
+    if (!_hintsWanted) return 0;
+    final ms = _hintWatch.elapsedMilliseconds;
+    if (ms < kHintDelayMs) return 0;
+    return clampD((ms - kHintDelayMs) / kHintFadeMs, 0, 1);
+  }
+
   final List<PanelState> panels = <PanelState>[PanelState(), PanelState()];
   String turnText = '';
   int turnOwner = 1;
@@ -290,6 +312,17 @@ class GameController extends ChangeNotifier {
       cv.flip = 0;
     }
     final showHints = !g.over && lock == 0 && hold == null && isHumanTurn && g.pending == 0;
+    // 人間の手番になった（または手番が変わった）ところから時間を数え直す
+    if (showHints && !_hintsWanted) {
+      _hintWatch
+        ..reset()
+        ..start();
+    } else if (!showHints && _hintsWanted) {
+      _hintWatch
+        ..stop()
+        ..reset();
+    }
+    _hintsWanted = showHints;
     hints = showHints ? g.moves(g.turn).keys.toSet() : <int>{};
 
     for (var p = 1; p <= 2; p++) {
@@ -320,7 +353,7 @@ class GameController extends ChangeNotifier {
       } else if (cpuSide) {
         ps.btnSub = max ? 'キレそう！' : 'ためてる';
       } else {
-        ps.btnSub = max ? '長押し！' : 'ゲージ不足';
+        ps.btnSub = max ? 'ひっくり返す！\n長押し' : 'ゲージ不足';
       }
       ps.btnReady = max && !cpuSide;
       if (max && !_prevMax[p - 1]) audio.ding();
@@ -330,7 +363,7 @@ class GameController extends ChangeNotifier {
     if (g.over) {
       turnText = 'ゲームセット';
     } else if (hold != null) {
-      turnText = '台パンのかまえ！';
+      turnText = '台パンのかまえ！（石をひっくり返す）';
       turnIsHold = true;
     } else if (g.pending != 0 && lock == 0) {
       turnText = 'パスを押そう…';
@@ -642,7 +675,7 @@ class GameController extends ChangeNotifier {
       message = '$who の台パン…は不発。机が丈夫すぎた。';
     } else {
       final tail = n1 != n2 ? '（端数は台パンした側）' : ' の同数';
-      message = '$who が台パン！ 石は $n1 対 $n2$tail。角は運しだい。';
+      message = '$who が台パンで石をひっくり返した！ 石は $n1 対 $n2$tail。角は運しだい。';
     }
     _notify();
   }

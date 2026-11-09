@@ -1,3 +1,6 @@
+/// いま動いているのがどの版か分かるように、タイトル画面の下に出す印。公開し直したのに古いままのときの確認用。
+const String kBuildLabel = '2026-11-09 b';
+
 /// あそびかた
 enum GameMode {
   /// ひとりで：2P側はコンピュータ
@@ -18,13 +21,10 @@ extension GameModeCodec on GameMode {
 class FaceKind {
   FaceKind._();
 
-  /// 通常顔（目の位置あわせあり。炎が出る）
+  /// 顔（目の位置あわせあり。炎が出る。勝ったときは画面いっぱいに出る）
   static const String normal = 'normal';
 
-  /// 変顔（勝ったとき画面いっぱいに出る）
-  static const String funny = 'funny';
-
-  static const List<String> all = <String>[normal, funny];
+  static const List<String> all = <String>[normal];
 }
 
 /// ゲージ増加の理由 → 画面に出す文言
